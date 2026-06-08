@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAD Highway — Learn UML Class Diagrams by Driving</title>
+<style>
+  :root{
+    --asphalt:#1a1d24; --asphalt-dark:#0d0f13; --amber:#ffb627;
+    --cyan:#4ecdc4; --magenta:#ff5d8f; --green:#95e06c; --red:#ff4757;
+    --paper:#f4ead5; --ink:#1a1d24;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--asphalt-dark);color:var(--paper);
+    font-family:'Courier New',monospace;overflow:hidden;height:100vh;
+    display:flex;align-items:center;justify-content:center;user-select:none;
+  }
+  #wrap{
+    position:relative;width:100%;max-width:480px;height:100vh;max-height:900px;
+    background:var(--asphalt-dark);box-shadow:0 0 100px rgba(255,182,39,.15);overflow:hidden;
+  }
+  canvas{display:block;width:100%;height:100%;background:var(--asphalt)}
+  #hud{
+    position:absolute;top:0;left:0;right:0;padding:10px 14px;z-index:10;
+    display:flex;justify-content:space-between;pointer-events:none;
+  }
+  .hb{background:rgba(13,15,19,.85);border:1px solid rgba(245,215,110,.3);
+    padding:5px 9px;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+  .hl{color:rgba(244,234,213,.5);font-size:8px}
+  .hv{color:var(--amber);font-size:15px;font-weight:bold}
+  #lessonChip{
+    position:absolute;top:54px;left:50%;transform:translateX(-50%);z-index:10;
+    background:rgba(13,15,19,.92);border:1px solid var(--cyan);
+    padding:3px 12px;font-size:10px;color:var(--cyan);font-weight:bold;
+    letter-spacing:1px;pointer-events:none;text-transform:uppercase;
+  }
+  #goldChip{
+    position:absolute;top:54px;right:12px;z-index:10;
+    background:rgba(13,15,19,.92);border:1px solid #c89a2e;
+    padding:3px 10px;font-size:12px;color:#f5d76e;font-weight:bold;
+    letter-spacing:1px;pointer-events:none;
+  }
+  /* Lesson banner */
+  #banner{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:92%;max-width:430px;background:var(--cyan);color:var(--ink);
+    border:4px solid var(--ink);padding:24px 20px;z-index:30;
+    box-shadow:10px 10px 0 var(--ink);display:none;text-align:center;
+  }
+  #banner.show{display:block;animation:cin .4s ease-out}
+  #banner .bn{font-size:11px;letter-spacing:4px;opacity:.7}
+  #banner .bt{font-size:24px;font-weight:bold;letter-spacing:2px;margin:8px 0 12px;text-transform:uppercase}
+  #banner .bg{font-size:13px;line-height:1.5}
+  #banner .bgo{margin-top:14px;font-size:11px;letter-spacing:2px;opacity:.7}
+  #banner .bgo b{font-size:14px}
+  @keyframes cin{from{transform:translate(-50%,-50%) scale(.85);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  /* Teach card — visual, minimal text */
+  #teach{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:94%;max-width:450px;background:var(--paper);color:var(--ink);
+    border:4px solid var(--ink);padding:18px;z-index:22;
+    box-shadow:10px 10px 0 var(--cyan);display:none;
+  }
+  #teach.show{display:block;animation:cin .35s ease-out}
+  #teachBadge{display:inline-block;background:var(--cyan);color:var(--ink);
+    padding:3px 12px;font-size:10px;letter-spacing:2px;font-weight:bold;margin-bottom:10px}
+  #teachCanvas{display:block;width:100%;height:190px;background:#fffdf5;
+    border:3px solid var(--ink);margin-bottom:10px}
+  #teachPoint{font-size:14px;line-height:1.5;font-weight:bold;color:var(--ink);text-align:center}
+  #teachSub{font-size:12px;line-height:1.45;color:var(--ink);text-align:center;margin-top:6px;opacity:.8}
+  #teachCount{margin-top:12px;text-align:center;font-size:10px;letter-spacing:2px;color:rgba(26,29,36,.6)}
+  #teachCount b{color:var(--red);font-size:14px}
+  /* Question prompt strip (under the diagram, above gates) */
+  #qStrip{
+    position:absolute;left:50%;transform:translateX(-50%);
+    bottom:150px;width:94%;max-width:450px;z-index:14;
+    background:rgba(13,15,19,.92);border:2px solid var(--amber);
+    padding:8px 12px;font-size:12px;line-height:1.4;text-align:center;
+    color:var(--paper);display:none;
+  }
+  #qStrip.show{display:block}
+  #qStrip b{color:var(--amber)}
+  /* Feedback */
+  #fb{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:25;
+    padding:16px 22px;font-size:15px;font-weight:bold;text-align:center;display:none;
+    background:var(--paper);border:4px solid var(--ink);max-width:92%;
+    box-shadow:8px 8px 0 rgba(0,0,0,.5);
+  }
+  #fb.show{display:block;animation:pop .3s ease-out}
+  #fb.ok{color:var(--green);border-color:var(--green);box-shadow:8px 8px 0 var(--green)}
+  #fb.no{color:var(--red);border-color:var(--red);box-shadow:8px 8px 0 var(--red)}
+  #fbWhy{color:var(--ink);font-size:12px;font-weight:normal;line-height:1.45;margin-top:8px;white-space:pre-line}
+  @keyframes pop{0%{transform:translate(-50%,-50%) scale(.5);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  /* Screens */
+  .scr{position:absolute;inset:0;background:var(--asphalt-dark);z-index:50;display:none;
+    flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center;overflow-y:auto}
+  .scr.show{display:flex}
+  .scr h1{font-size:26px;letter-spacing:3px;color:var(--amber);margin-bottom:6px;text-shadow:4px 4px 0 var(--red)}
+  .scr .sub{font-size:11px;letter-spacing:3px;color:rgba(244,234,213,.6);margin-bottom:16px;text-transform:uppercase}
+  .scr p{font-size:13px;line-height:1.6;margin-bottom:12px;max-width:390px;color:rgba(244,234,213,.85)}
+  .road{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-width:390px;width:100%;font-size:11px;letter-spacing:1px}
+  .road>div{background:rgba(244,234,213,.08);padding:8px 11px;border-left:3px solid var(--cyan);text-align:left}
+  .road b{color:var(--cyan)}
+  .ch{background:rgba(255,182,39,.1);border:1px solid var(--amber);padding:11px;margin:12px 0;font-size:11px;letter-spacing:1px;max-width:320px}
+  .ch .k{display:inline-block;background:var(--amber);color:var(--ink);padding:2px 8px;margin:0 2px;font-weight:bold}
+  .btn{background:var(--amber);color:var(--ink);border:3px solid var(--ink);padding:11px 26px;
+    font-family:'Courier New',monospace;font-size:13px;font-weight:bold;letter-spacing:3px;
+    cursor:pointer;margin:5px;text-transform:uppercase;box-shadow:5px 5px 0 var(--red);transition:.1s}
+  .btn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--red)}
+  .btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--red)}
+  .btn.sec{background:var(--paper);box-shadow:5px 5px 0 var(--cyan)}
+  .sr{display:flex;justify-content:space-between;width:100%;max-width:320px;padding:7px 11px;
+    background:rgba(244,234,213,.06);margin-bottom:4px;font-size:12px;letter-spacing:1px}
+  .sr .sl{color:rgba(244,234,213,.7)}
+  .sr .sv{color:var(--amber);font-weight:bold}
+  .rc{background:var(--paper);color:var(--ink);padding:13px;margin:8px 0;width:100%;max-width:380px;
+    border:3px solid var(--ink);box-shadow:4px 4px 0 var(--amber);text-align:left;font-size:12px;line-height:1.5}
+  .rc canvas{display:block;width:100%;height:120px;background:#fffdf5;border:2px solid var(--ink);margin:6px 0}
+  .rc .rt{font-size:15px;font-weight:bold;color:var(--green);margin:4px 0}
+  .rlist{width:100%;max-width:380px}
+  .sg{display:grid;grid-template-columns:1fr;gap:9px;width:100%;max-width:380px;margin-bottom:14px}
+  .si{background:var(--paper);color:var(--ink);padding:11px;border:3px solid var(--ink);
+    text-align:left;box-shadow:4px 4px 0 var(--amber);display:flex;align-items:flex-start;gap:11px}
+  .si .ic{font-size:26px;flex-shrink:0;width:38px;text-align:center}
+  .si .nm{font-weight:bold;font-size:13px;letter-spacing:1px;margin-bottom:3px}
+  .si .ds{font-size:11px;line-height:1.4;opacity:.85;margin-bottom:5px}
+  .si .ft{display:flex;justify-content:space-between;align-items:center}
+  .si .ct{color:#c89a2e;font-weight:bold;font-size:12px}
+  .si .cn{background:var(--ink);color:var(--amber);padding:2px 7px;font-size:10px}
+  .si button{background:var(--ink);color:var(--amber);border:none;padding:4px 11px;
+    font-family:'Courier New',monospace;font-size:11px;font-weight:bold;cursor:pointer;text-transform:uppercase}
+  .si button:disabled{background:#999;opacity:.6;cursor:not-allowed}
+  .si button.eq{background:var(--cyan);color:var(--ink)}
+  .si .bd{flex:1}
+  #shopScr .bnk{background:rgba(245,215,110,.1);border:2px solid #f5d76e;padding:9px 22px;
+    margin-bottom:18px;font-size:17px;color:#f5d76e;letter-spacing:2px;font-weight:bold}
+  .pp{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:11px;max-width:360px}
+  .pp button{background:rgba(244,234,213,.08);border:2px solid rgba(244,234,213,.2);color:var(--paper);
+    padding:6px 11px;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:'Courier New',monospace;
+    font-weight:bold;text-transform:uppercase}
+  .pp button.on{background:var(--amber);color:var(--ink);border-color:var(--amber)}
+  #touch{position:absolute;bottom:0;left:0;right:0;height:80px;z-index:15;display:none;pointer-events:none}
+  .th{position:absolute;top:0;bottom:0;width:50%;pointer-events:auto}
+  #tl{left:0}#tr{right:0}
+  @media (hover:none) and (pointer:coarse){#touch{display:block}}
+  @media (max-width:500px){#wrap{max-width:100%;max-height:100%}}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hb"><div class="hl">Score</div><div class="hv" id="vScore">0</div></div>
+    <div class="hb" style="text-align:center"><div class="hl">Lives</div><div class="hv" id="vLives">❤️❤️❤️</div></div>
+    <div class="hb" style="text-align:right"><div class="hl">Mastery</div><div class="hv" id="vAcc">—</div></div>
+  </div>
+  <div id="lessonChip">Lesson 1</div>
+  <div id="goldChip">💰 <span id="vGold">0</span></div>
+
+  <div id="banner">
+    <div class="bn" id="bnNum">LESSON 1 OF 4</div>
+    <div class="bt" id="bnTitle"></div>
+    <div class="bg" id="bnGoal"></div>
+    <div class="bgo">STARTS IN <b id="bnSecs">3</b></div>
+  </div>
+
+  <div id="teach">
+    <span id="teachBadge">HOW TO READ THIS</span>
+    <canvas id="teachCanvas"></canvas>
+    <div id="teachPoint"></div>
+    <div id="teachSub"></div>
+    <div id="teachCount">DRIVE IN <b id="teachSecs">12</b></div>
+  </div>
+
+  <div id="qStrip"></div>
+
+  <div id="fb">
+    <div id="fbHead"></div>
+    <div id="fbWhy"></div>
+  </div>
+
+  <div id="touch"><div class="th" id="tl"></div><div class="th" id="tr"></div></div>
+
+  <!-- START -->
+  <div class="scr show" id="startScr">
+    <h1>SAD HIGHWAY</h1>
+    <div class="sub">Learn UML Class Diagrams</div>
+    <p>You don't read definitions — you <b>read real UML diagrams while driving</b>. A diagram appears at the top of the road. Steer through the <b>gate</b> that correctly interprets it. Wrong? You keep <b>3 ❤️ lives</b>: the game shows you why, then lets you <b>try the same diagram again</b>. Learn by seeing, not memorizing.</p>
+    <div class="road">
+      <div><b>Lesson 1 ·</b> Classes & Attributes — read the boxes</div>
+      <div><b>Lesson 2 ·</b> Multiplicity — read the 1, 0..*, 1..* numbers</div>
+      <div><b>Lesson 3 ·</b> Aggregation ◇ vs Composition ◆ — read the diamond</div>
+      <div><b>Lesson 4 ·</b> Mixed — inheritance ▷, association classes & more</div>
+    </div>
+    <div id="pPills" class="pp"></div>
+    <div class="ch"><span class="k">←</span> <span class="k">→</span> or <span class="k">A</span> <span class="k">D</span> to choose your gate</div>
+    <button class="btn" onclick="startGame()">▶ START LESSON 1</button>
+    <button class="btn sec" onclick="showShop()">🏪 MARKET (<span id="sBank">0</span> 💰)</button>
+    <p style="font-size:10px;opacity:.5;margin-top:12px">Satzinger, Jackson &amp; Burd · 7th Ed. Chapter 4</p>
+  </div>
+
+  <div class="scr" id="endScr">
+    <h1 id="eTitle">RUN OVER</h1>
+    <div class="sub" id="eReason">Run complete</div>
+    <div class="sr"><span class="sl">Score</span><span class="sv" id="fScore">0</span></div>
+    <div class="sr"><span class="sl">Lesson Reached</span><span class="sv" id="fLesson">1</span></div>
+    <div class="sr"><span class="sl">Diagrams Read</span><span class="sv" id="fQ">0</span></div>
+    <div class="sr"><span class="sl">Accuracy</span><span class="sv" id="fAcc">0%</span></div>
+    <div class="sr"><span class="sl">💰 Gold This Run</span><span class="sv" id="fGold">0</span></div>
+    <div class="sr"><span class="sl">🏦 Total Bank</span><span class="sv" id="fBank">0</span></div>
+    <button class="btn" onclick="startGame()">▶ TRY AGAIN</button>
+    <button class="btn sec" onclick="showShop()">🏪 MARKET</button>
+    <button class="btn sec" onclick="showReview()" id="revBtn">📖 REVIEW</button>
+  </div>
+
+  <div class="scr" id="revScr">
+    <h1>REVIEW</h1>
+    <div class="sub">Diagrams you misread</div>
+    <div class="rlist" id="revList"></div>
+    <button class="btn" onclick="backToEnd()">← BACK</button>
+  </div>
+
+  <div class="scr" id="shopScr">
+    <h1>🏪 MARKET</h1>
+    <div class="sub">Spend your gold</div>
+    <div class="bnk">🏦 BANK: <span id="shBank">0</span> 💰</div>
+    <div class="sg" id="shGrid"></div>
+    <button class="btn" onclick="closeShop()">← BACK</button>
+  </div>
+</div>
+
+<script>
+/* ======================================================================
+   SAD HIGHWAY v6 — VISUAL UML class-diagram teaching game
+   Core idea: a real UML diagram fragment is DRAWN on screen. The player
+   steers through one of 3 GATES that correctly interprets it. No reading
+   definitions, no spelling words — learn by seeing & deciding.
+   Topic: Ch.4 Domain Model Class Diagram (Satzinger, Jackson & Burd)
+   ====================================================================== */
+
+/* ---------------- UML DIAGRAM DRAWING PRIMITIVES ----------------
+   A tiny renderer that draws class boxes, association lines with
+   multiplicity labels, aggregation/composition diamonds, and
+   generalization triangles onto any 2D context. Coordinates are in a
+   virtual 300x150 space, scaled to the target canvas.
+*/
+function drawUML(g, spec, CW, CH) {
+  // Virtual space 300 x 150 → scale to CW x CH
+  const sx = CW / 300, sy = CH / 150;
+  const S = (v, axis) => axis === 'x' ? v * sx : v * sy;
+  g.clearRect(0, 0, CW, CH);
+  g.lineWidth = Math.max(1.5, 2 * sx);
+  g.strokeStyle = '#1a1d24';
+  g.fillStyle = '#1a1d24';
+  g.font = `bold ${Math.round(11 * sx)}px Courier New`;
+  g.textBaseline = 'middle';
+
+  // helper: draw a class box at virtual (x,y,w,h) with name + attribute lines
+  function box(b) {
+    const x = S(b.x,'x'), y = S(b.y,'y'), w = S(b.w,'x'), h = S(b.h,'y');
+    g.fillStyle = '#fffdf5';
+    g.fillRect(x, y, w, h);
+    g.strokeStyle = '#1a1d24';
+    g.strokeRect(x, y, w, h);
+    // name row
+    const nameH = S(20,'y');
+    g.strokeRect(x, y, w, nameH);
+    g.fillStyle = '#1a1d24';
+    g.textAlign = 'center';
+    g.font = `bold ${Math.round(12 * sx)}px Courier New`;
+    if (b.italic) g.font = `italic bold ${Math.round(12 * sx)}px Courier New`;
+    g.fillText(b.name, x + w/2, y + nameH/2);
+    // attributes
+    if (b.attrs && b.attrs.length) {
+      g.textAlign = 'left';
+      g.font = `${Math.round(9.5 * sx)}px Courier New`;
+      b.attrs.forEach((a, i) => {
+        g.fillText(a, x + S(5,'x'), y + nameH + S(13,'y') + i * S(13,'y'));
+      });
+    }
+  }
+
+  // helper: association line with optional end multiplicities & diamond/triangle
+  function line(L) {
+    const x1 = S(L.x1,'x'), y1 = S(L.y1,'y'), x2 = S(L.x2,'x'), y2 = S(L.y2,'y');
+    g.strokeStyle = '#1a1d24';
+    g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+
+    // multiplicity labels near each end
+    g.fillStyle = '#1a1d24';
+    g.font = `bold ${Math.round(11 * sx)}px Courier New`;
+    g.textAlign = 'center';
+    if (L.m1) g.fillText(L.m1, x1 + (x2>x1? S(16,'x') : -S(16,'x')), y1 - S(8,'y'));
+    if (L.m2) g.fillText(L.m2, x2 + (x1>x2? S(16,'x') : -S(16,'x')), y2 - S(8,'y'));
+    // association name (verb) in the middle
+    if (L.label) {
+      g.font = `italic ${Math.round(10 * sx)}px Courier New`;
+      g.fillText(L.label, (x1+x2)/2, (y1+y2)/2 - S(9,'y'));
+    }
+
+    // decoration at end 1: 'diamondHollow' | 'diamondFilled' | 'triangle'
+    function deco(kind, px, py, towardX, towardY) {
+      const ang = Math.atan2(towardY - py, towardX - px);
+      if (kind === 'triangle') {
+        const sz = S(13,'x');
+        g.beginPath();
+        g.moveTo(px, py);
+        g.lineTo(px + Math.cos(ang + 0.45) * sz, py + Math.sin(ang + 0.45) * sz);
+        g.lineTo(px + Math.cos(ang - 0.45) * sz, py + Math.sin(ang - 0.45) * sz);
+        g.closePath();
+        g.fillStyle = '#fffdf5'; g.fill(); g.strokeStyle = '#1a1d24'; g.stroke();
+      } else if (kind === 'diamondHollow' || kind === 'diamondFilled') {
+        const sz = S(9,'x');
+        const cx = px + Math.cos(ang) * sz, cy = py + Math.sin(ang) * sz;
+        g.beginPath();
+        g.moveTo(px, py);
+        g.lineTo(cx + Math.cos(ang + 1.571) * sz*0.7, cy + Math.sin(ang + 1.571) * sz*0.7);
+        g.lineTo(px + Math.cos(ang) * sz*2, py + Math.sin(ang) * sz*2);
+        g.lineTo(cx + Math.cos(ang - 1.571) * sz*0.7, cy + Math.sin(ang - 1.571) * sz*0.7);
+        g.closePath();
+        if (kind === 'diamondFilled') { g.fillStyle = '#1a1d24'; g.fill(); }
+        else { g.fillStyle = '#fffdf5'; g.fill(); g.strokeStyle = '#1a1d24'; g.stroke(); }
+      }
+    }
+    if (L.d1) deco(L.d1, x1, y1, x2, y2);
+    if (L.d2) deco(L.d2, x2, y2, x1, y1);
+  }
+
+  (spec.boxes || []).forEach(box);
+  (spec.lines || []).forEach(line);
+}
+
+/* ---------------- LESSONS ---------------- */
+const LESSONS = [
+  {id:1, title:'Classes & Attributes',
+   goal:"A class box has a NAME on top and ATTRIBUTES below. Class names are Capitalized; attributes use camelBack.",
+   clearAfter:4},
+  {id:2, title:'Reading Multiplicity',
+   goal:"The little numbers on an association line (1, 0..1, 0..*, 1..*) say HOW MANY objects take part on each end.",
+   clearAfter:5},
+  {id:3, title:'Aggregation vs Composition',
+   goal:"A hollow diamond ◇ = aggregation (part lives alone). A filled diamond ◆ = composition (part dies with the whole).",
+   clearAfter:5},
+  {id:4, title:'Mixed Mastery',
+   goal:"Inheritance triangles ▷, association classes, abstract classes. Read any fragment and pick the right meaning.",
+   clearAfter:999},
+];
+
+/* ---------------- QUESTION BANK ----------------
+   Each item draws a UML 'diagram' and offers 3 gate options; one correct.
+   teachDiagram = the labelled version shown on the teaching card.
+   teachPoint/teachSub = short visual caption (NOT a definition dump).
+*/
+const BANK = [
+  /* ===== LESSON 1 — Classes & Attributes ===== */
+  {lesson:1,
+   diagram:{boxes:[{x:110,y:35,w:80,h:80,name:'Customer',attrs:['custNumber','name','homePhone']}]},
+   teach:{point:"This box is a CLASS.", sub:"Top = class name (Capitalized). Below the line = its attributes.",
+          tdiagram:{boxes:[{x:110,y:35,w:80,h:80,name:'Customer',attrs:['custNumber','name','homePhone']}],
+                    lines:[{x1:150,y1:25,x2:150,y2:33}]}},
+   q:"In this UML box, what is <b>Customer</b>?",
+   gates:["A CLASS","An ATTRIBUTE","An OBJECT"], correct:0,
+   why:"The bold word at the TOP of the box is always the class name. Attributes (custNumber, name…) sit below the dividing line."},
+
+  {lesson:1,
+   diagram:{boxes:[{x:110,y:35,w:85,h:80,name:'Customer',attrs:['custNumber','name','homePhone']}]},
+   teach:{point:"camelBack attributes.", sub:"custNumber, homePhone — lowercase start, second word capitalized.",
+          tdiagram:{boxes:[{x:110,y:35,w:85,h:80,name:'Customer',attrs:['custNumber','name','homePhone']}]}},
+   q:"What is <b>homePhone</b> in this box?",
+   gates:["An ATTRIBUTE","The CLASS NAME","An ASSOCIATION"], correct:0,
+   why:"Items listed BELOW the name line are attributes. They use camelBack: words joined, second word capitalized."},
+
+  {lesson:1,
+   diagram:{boxes:[{x:105,y:32,w:90,h:86,name:'Order',attrs:['orderID  {key}','orderDate','amount']}]},
+   teach:{point:"The {key} marks the IDENTIFIER.", sub:"It uniquely identifies one object of the class.",
+          tdiagram:{boxes:[{x:105,y:32,w:90,h:86,name:'Order',attrs:['orderID  {key}','orderDate','amount']}]}},
+   q:"Which attribute is the <b>identifier (key)</b>?",
+   gates:["orderID","orderDate","amount"], correct:0,
+   why:"The attribute marked {key} is the unique identifier. Here orderID {key} uniquely identifies one Order."},
+
+  {lesson:1,
+   diagram:{boxes:[
+     {x:30,y:45,w:80,h:60,name:'Customer',attrs:['custNumber','name']},
+     {x:190,y:45,w:80,h:60,name:'Order',attrs:['orderID','amount']}]},
+   teach:{point:"Two separate CLASSES.", sub:"Each box is its own class with its own attributes.",
+          tdiagram:{boxes:[
+            {x:30,y:45,w:80,h:60,name:'Customer',attrs:['custNumber','name']},
+            {x:190,y:45,w:80,h:60,name:'Order',attrs:['orderID','amount']}]}},
+   q:"How many <b>classes</b> are shown here?",
+   gates:["TWO","ONE","THREE"], correct:0,
+   why:"Each box = one class. Here there are two boxes: Customer and Order — two classes."},
+
+  {lesson:1,
+   diagram:{boxes:[{x:110,y:35,w:85,h:80,name:'Customer',attrs:['custNumber','name','homePhone']}]},
+   teach:{point:"Class name vs attribute name.", sub:"Customer = Capitalized class. name = lowercase attribute.",
+          tdiagram:{boxes:[{x:110,y:35,w:85,h:80,name:'Customer',attrs:['custNumber','name','homePhone']}]}},
+   q:"Why is <b>Customer</b> capitalized but <b>name</b> is not?",
+   gates:["UML CLASS-NAME RULE","JUST A TYPO","CAPITAL = KEY"], correct:0,
+   why:"UML convention: class names start Capitalized (and use CamelBack if compound). Attribute names start lowercase, camelBack."},
+
+  /* ===== LESSON 2 — Multiplicity ===== */
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Customer'},
+     {x:200,y:50,w:75,h:55,name:'Order'}],
+    lines:[{x1:100,y1:77,x2:200,y2:77,m1:'1',m2:'0..*',label:'places'}]},
+   teach:{point:"Read multiplicity at EACH end.", sub:"Customer side = 1.  Order side = 0..* (zero or more).",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Customer'},
+            {x:200,y:50,w:75,h:55,name:'Order'}],
+           lines:[{x1:100,y1:77,x2:200,y2:77,m1:'1',m2:'0..*',label:'places'}]}},
+   q:"How many <b>Orders</b> can one Customer have? (look at the Order end)",
+   gates:["ZERO OR MORE","EXACTLY ONE","ONE OR MORE"], correct:0,
+   why:"The 0..* on the Order end means minimum 0 (optional), maximum many. A new customer may have no orders yet."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Customer'},
+     {x:200,y:50,w:75,h:55,name:'Order'}],
+    lines:[{x1:100,y1:77,x2:200,y2:77,m1:'1',m2:'0..*',label:'places'}]},
+   teach:{point:"The '1' end is mandatory & single.", sub:"Every Order must belong to exactly one Customer.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Customer'},
+            {x:200,y:50,w:75,h:55,name:'Order'}],
+           lines:[{x1:100,y1:77,x2:200,y2:77,m1:'1',m2:'0..*',label:'places'}]}},
+   q:"How many <b>Customers</b> place a single Order? (look at the Customer end: 1)",
+   gates:["EXACTLY ONE","ZERO OR MORE","ONE OR MORE"], correct:0,
+   why:"'1' means one and only one — mandatory and single. An order cannot exist without exactly one customer."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:70,h:55,name:'Order'},
+     {x:200,y:50,w:80,h:55,name:'OrderItem'}],
+    lines:[{x1:95,y1:77,x2:200,y2:77,m1:'1',m2:'1..*',label:'contains'}]},
+   teach:{point:"1..* = one OR more.", sub:"An Order must contain at least one OrderItem, maybe many.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:70,h:55,name:'Order'},
+            {x:200,y:50,w:80,h:55,name:'OrderItem'}],
+           lines:[{x1:95,y1:77,x2:200,y2:77,m1:'1',m2:'1..*',label:'contains'}]}},
+   q:"How many <b>OrderItems</b> are in one Order? (look at the 1..* end)",
+   gates:["ONE OR MORE","ZERO OR MORE","EXACTLY ONE"], correct:0,
+   why:"1..* = minimum 1 (mandatory) and maximum many. An order with zero items makes no sense, so at least one."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Branch'},
+     {x:200,y:50,w:75,h:55,name:'Account'}],
+    lines:[{x1:100,y1:77,x2:200,y2:77,m1:'0..1',m2:'0..*',label:'holds'}]},
+   teach:{point:"0..1 = optional, at most one.", sub:"An Account may belong to no branch, or to one branch.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Branch'},
+            {x:200,y:50,w:75,h:55,name:'Account'}],
+           lines:[{x1:100,y1:77,x2:200,y2:77,m1:'0..1',m2:'0..*',label:'holds'}]}},
+   q:"Branch end shows <b>0..1</b>. What does that mean for an Account?",
+   gates:["OPTIONAL · 0 OR 1","ALWAYS EXACTLY 1","ONE OR MORE"], correct:0,
+   why:"0..1 means minimum 0 (so it's optional) and maximum 1. The account may have no branch, or at most one."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Customer'},
+     {x:200,y:50,w:75,h:55,name:'Order'}],
+    lines:[{x1:100,y1:77,x2:200,y2:77,m1:'1',m2:'0..*',label:'places'}]},
+   teach:{point:"Minimum 0 means OPTIONAL.", sub:"Minimum at the Order end is 0 → the relationship is optional.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Customer'},
+            {x:200,y:50,w:75,h:55,name:'Order'}],
+           lines:[{x1:100,y1:77,x2:200,y2:77,m1:'1',m2:'0..*',label:'places'}]}},
+   q:"The Order end is <b>0..*</b>. Is placing an order <b>mandatory</b> for a customer?",
+   gates:["NO · OPTIONAL  (MIN 0)","YES · MANDATORY","ONLY ON  WEEKENDS"], correct:0,
+   why:"When the minimum is 0 the association is optional. A customer can exist without ever placing an order."},
+
+  /* ===== LESSON 3 — Aggregation vs Composition ===== */
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:75,h:55,name:'Order'},
+     {x:205,y:50,w:80,h:55,name:'OrderItem'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondFilled'}]},
+   teach:{point:"FILLED diamond ◆ = COMPOSITION.", sub:"Delete the Order → its OrderItems are destroyed too.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:75,h:55,name:'Order'},
+            {x:205,y:50,w:80,h:55,name:'OrderItem'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondFilled'}]}},
+   q:"The diamond is <b>filled (solid black)</b>. Which relationship is this?",
+   gates:["COMPOSITION","AGGREGATION","INHERITANCE"], correct:0,
+   why:"A filled/solid diamond = composition. The part (OrderItem) cannot exist without the whole (Order)."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:80,h:55,name:'Computer'},
+     {x:210,y:50,w:70,h:55,name:'Disk'}],
+    lines:[{x1:110,y1:77,x2:210,y2:77,d1:'diamondHollow'}]},
+   teach:{point:"HOLLOW diamond ◇ = AGGREGATION.", sub:"Remove the Disk — it still exists on its own.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:80,h:55,name:'Computer'},
+            {x:210,y:50,w:70,h:55,name:'Disk'}],
+           lines:[{x1:110,y1:77,x2:210,y2:77,d1:'diamondHollow'}]}},
+   q:"The diamond is <b>hollow (open outline)</b>. Which relationship is this?",
+   gates:["AGGREGATION","COMPOSITION","ASSOCIATION"], correct:0,
+   why:"A hollow/open diamond = aggregation. The part (Disk) can exist independently of the whole (Computer)."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:75,h:55,name:'Building'},
+     {x:205,y:50,w:70,h:55,name:'Room'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondFilled'}]},
+   teach:{point:"Composition test.", sub:"No building → no rooms. The part cannot survive the whole.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:75,h:55,name:'Building'},
+            {x:205,y:50,w:70,h:55,name:'Room'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondFilled'}]}},
+   q:"Filled diamond on Building. If the Building is demolished, the Rooms…",
+   gates:["DESTROYED  TOO","STILL EXIST  ALONE","BECOME  NEW CLASS"], correct:0,
+   why:"Filled diamond = composition. Destroying the whole destroys its parts. Demolish the building → rooms gone."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:70,h:55,name:'Team'},
+     {x:200,y:50,w:75,h:55,name:'Player'}],
+    lines:[{x1:100,y1:77,x2:200,y2:77,d1:'diamondHollow'}]},
+   teach:{point:"Aggregation test.", sub:"A player can leave and join another team — survives alone.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:70,h:55,name:'Team'},
+            {x:200,y:50,w:75,h:55,name:'Player'}],
+           lines:[{x1:100,y1:77,x2:200,y2:77,d1:'diamondHollow'}]}},
+   q:"Hollow diamond on Team. A Player can…",
+   gates:["LEAVE & STILL  EXIST","NEVER EXIST  ALONE","BE DELETED  WITH TEAM"], correct:0,
+   why:"Hollow diamond = aggregation. The part survives independently — a player exists even after leaving a team."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:75,h:55,name:'Order'},
+     {x:205,y:50,w:80,h:55,name:'OrderItem'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondFilled'}]},
+   teach:{point:"Diamond sits on the WHOLE.", sub:"The diamond end is the 'whole' (Order). The other end is the part.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:75,h:55,name:'Order'},
+            {x:205,y:50,w:80,h:55,name:'OrderItem'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondFilled'}]}},
+   q:"The diamond touches Order. Which class is the <b>WHOLE</b>?",
+   gates:["Order","OrderItem","Neither"], correct:0,
+   why:"The diamond is always drawn on the WHOLE's end. Here it touches Order, so Order is the whole, OrderItem the part."},
+
+  /* ===== LESSON 4 — Mixed Mastery ===== */
+  {lesson:4,
+   diagram:{boxes:[
+     {x:110,y:18,w:80,h:34,name:'Account'},
+     {x:25,y:96,w:90,h:40,name:'SavingsAccount'},
+     {x:185,y:96,w:95,h:40,name:'CheckingAccount'}],
+    lines:[
+     {x1:150,y1:52,x2:150,y2:62},
+     {x1:70,y1:96,x2:135,y2:58,d2:'triangle'},
+     {x1:232,y1:96,x2:165,y2:58,d2:'triangle'}]},
+   teach:{point:"Hollow TRIANGLE ▷ = inheritance.", sub:"It points at the SUPERCLASS (the general one) — here Account.",
+          tdiagram:{boxes:[
+            {x:110,y:18,w:80,h:34,name:'Account'},
+            {x:25,y:96,w:90,h:40,name:'SavingsAccount'},
+            {x:185,y:96,w:95,h:40,name:'CheckingAccount'}],
+           lines:[
+            {x1:150,y1:52,x2:150,y2:62},
+            {x1:70,y1:96,x2:135,y2:58,d2:'triangle'},
+            {x1:232,y1:96,x2:165,y2:58,d2:'triangle'}]}},
+   q:"The triangle points to <b>Account</b>. Which class is the <b>superclass</b>?",
+   gates:["Account","SavingsAccount","CheckingAccount"], correct:0,
+   why:"The hollow triangle always points to the superclass (the general parent). Account is general; the others inherit from it."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:110,y:18,w:80,h:34,name:'Account'},
+     {x:25,y:96,w:90,h:40,name:'SavingsAccount'},
+     {x:185,y:96,w:95,h:40,name:'CheckingAccount'}],
+    lines:[
+     {x1:150,y1:52,x2:150,y2:62},
+     {x1:70,y1:96,x2:135,y2:58,d2:'triangle'},
+     {x1:232,y1:96,x2:165,y2:58,d2:'triangle'}]},
+   teach:{point:"Subclasses inherit everything.", sub:"SavingsAccount gets all of Account's attributes & associations.",
+          tdiagram:{boxes:[
+            {x:110,y:18,w:80,h:34,name:'Account'},
+            {x:25,y:96,w:90,h:40,name:'SavingsAccount'},
+            {x:185,y:96,w:95,h:40,name:'CheckingAccount'}],
+           lines:[
+            {x1:150,y1:52,x2:150,y2:62},
+            {x1:70,y1:96,x2:135,y2:58,d2:'triangle'},
+            {x1:232,y1:96,x2:165,y2:58,d2:'triangle'}]}},
+   q:"<b>SavingsAccount</b> and <b>CheckingAccount</b> are the…",
+   gates:["SUBCLASSES","SUPERCLASSES","ASSOCIATION CLASSES"], correct:0,
+   why:"The specialized classes at the wide end of the triangle are subclasses. They inherit all features of the superclass Account."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:18,y:50,w:75,h:55,name:'Student'},
+     {x:205,y:50,w:80,h:55,name:'Section'},
+     {x:115,y:5,w:75,h:34,name:'Enrollment',attrs:['grade']}],
+    lines:[
+     {x1:93,y1:77,x2:205,y2:77,m1:'0..*',m2:'0..*'},
+     {x1:150,y1:39,x2:150,y2:75}]},
+   teach:{point:"Association CLASS.", sub:"A many-to-many that needs its own data (grade) becomes a class on the link.",
+          tdiagram:{boxes:[
+            {x:18,y:50,w:75,h:55,name:'Student'},
+            {x:205,y:50,w:80,h:55,name:'Section'},
+            {x:115,y:5,w:75,h:34,name:'Enrollment',attrs:['grade']}],
+           lines:[
+            {x1:93,y1:77,x2:205,y2:77,m1:'0..*',m2:'0..*'},
+            {x1:150,y1:39,x2:150,y2:75}]}},
+   q:"<b>Enrollment(grade)</b> hanging off the 0..*—0..* link is a/an…",
+   gates:["ASSOCIATION CLASS","SUPERCLASS","COMPOSITION"], correct:0,
+   why:"A many-to-many association that must remember its own data (grade) is modeled as an association class on the link."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:115,y:18,w:70,h:34,name:'Sale',italic:true},
+     {x:30,y:96,w:80,h:40,name:'OnlineSale'},
+     {x:190,y:96,w:90,h:40,name:'InStoreSale'}],
+    lines:[
+     {x1:150,y1:52,x2:150,y2:62},
+     {x1:70,y1:96,x2:138,y2:58,d2:'triangle'},
+     {x1:235,y1:96,x2:162,y2:58,d2:'triangle'}]},
+   teach:{point:"Italic name = ABSTRACT class.", sub:"You never create a plain Sale — only its concrete subclasses.",
+          tdiagram:{boxes:[
+            {x:115,y:18,w:70,h:34,name:'Sale',italic:true},
+            {x:30,y:96,w:80,h:40,name:'OnlineSale'},
+            {x:190,y:96,w:90,h:40,name:'InStoreSale'}],
+           lines:[
+            {x1:150,y1:52,x2:150,y2:62},
+            {x1:70,y1:96,x2:138,y2:58,d2:'triangle'},
+            {x1:235,y1:96,x2:162,y2:58,d2:'triangle'}]}},
+   q:"<b>Sale</b> is written in <i>italics</i>. That means Sale is…",
+   gates:["ABSTRACT","THE IDENTIFIER","AN ATTRIBUTE"], correct:0,
+   why:"An italic class name signals an abstract class. It exists only to be inherited; you instantiate its concrete subclasses."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:25,y:50,w:80,h:55,name:'Account'},
+     {x:205,y:50,w:85,h:55,name:'Transaction'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,m1:'1',m2:'1..*',label:'records'}]},
+   teach:{point:"Read both ends together.", sub:"One Account records one-or-more Transactions.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:80,h:55,name:'Account'},
+            {x:205,y:50,w:85,h:55,name:'Transaction'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,m1:'1',m2:'1..*',label:'records'}]}},
+   q:"Account 1 — 1..* Transaction. Pick the correct reading:",
+   gates:["1 ACCT →  1..* TXNS","1 ACCT →  AT MOST 1 TXN","TXN HAS  NO ACCT"], correct:0,
+   why:"Account end = 1, Transaction end = 1..*. So one account is linked to one-or-more transactions."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:30,y:50,w:75,h:55,name:'Playlist'},
+     {x:205,y:50,w:70,h:55,name:'Song'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondHollow'}]},
+   teach:{point:"Which diamond is this?", sub:"Open outline → the song survives outside the playlist.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:75,h:55,name:'Playlist'},
+            {x:205,y:50,w:70,h:55,name:'Song'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,d1:'diamondHollow'}]}},
+   q:"Hollow diamond Playlist ◇— Song. Removing a song from the playlist…",
+   gates:["SONG STILL  EXISTS","SONG IS  DELETED","SONG BECOMES  SUBCLASS"], correct:0,
+   why:"Hollow diamond = aggregation. The song exists independently; removing it from a playlist does not destroy it."},
+
+  /* ===== NEW LESSON 1 — more class/attribute variety ===== */
+  {lesson:1,
+   diagram:{boxes:[{x:100,y:30,w:100,h:90,name:'Product',attrs:['productID  {key}','title','price','stockQty']}]},
+   teach:{point:"Bigger class, more attributes.", sub:"One name on top, the key marked {key}, the rest are plain attributes.",
+          tdiagram:{boxes:[{x:100,y:30,w:100,h:90,name:'Product',attrs:['productID  {key}','title','price','stockQty']}]}},
+   q:"How many <b>attributes</b> does Product have? (count the lines below the name)",
+   gates:["FOUR","ONE","THREE"], correct:0,
+   why:"Below the name line there are 4 attributes: productID, title, price, stockQty."},
+
+  {lesson:1,
+   diagram:{boxes:[{x:105,y:35,w:90,h:80,name:'Employee',attrs:['empID  {key}','fullName','salary']}]},
+   teach:{point:"Where does the name go?", sub:"The class name always sits in the TOP compartment.",
+          tdiagram:{boxes:[{x:105,y:35,w:90,h:80,name:'Employee',attrs:['empID  {key}','fullName','salary']}]}},
+   q:"Which part of the box holds the <b>class name</b>?",
+   gates:["TOP COMPARTMENT","BOTTOM ROW","THE BORDER"], correct:0,
+   why:"A UML class box puts the class name in the top compartment, attributes underneath."},
+
+  {lesson:1,
+   diagram:{boxes:[{x:105,y:35,w:90,h:80,name:'BankAccount',attrs:['accountNo  {key}','balance']}]},
+   teach:{point:"Compound class name.", sub:"BankAccount uses CamelBack — two capitalized words joined.",
+          tdiagram:{boxes:[{x:105,y:35,w:90,h:80,name:'BankAccount',attrs:['accountNo  {key}','balance']}]}},
+   q:"<b>BankAccount</b> joins two capitalized words. This naming style is called…",
+   gates:["CAMELBACK","SNAKE_CASE","KEBAB-CASE"], correct:0,
+   why:"UML class names use CamelBack: words joined, each starting capitalized (BankAccount, OrderItem)."},
+
+  /* ===== NEW LESSON 2 — more multiplicity variety ===== */
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:80,h:55,name:'Author'},
+     {x:205,y:50,w:75,h:55,name:'Book'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,m1:'1..*',m2:'1..*',label:'writes'}]},
+   teach:{point:"Many-to-many.", sub:"1..* on BOTH ends — authors write many books, books have many authors.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:80,h:55,name:'Author'},
+            {x:205,y:50,w:75,h:55,name:'Book'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,m1:'1..*',m2:'1..*',label:'writes'}]}},
+   q:"Both ends show 1..*. What kind of relationship is this?",
+   gates:["MANY-TO-MANY","ONE-TO-ONE","ONE-TO-MANY"], correct:0,
+   why:"When both ends are 1..* (or *), it's a many-to-many: each side can link to many of the other."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Person'},
+     {x:205,y:50,w:85,h:55,name:'Passport'}],
+    lines:[{x1:100,y1:77,x2:205,y2:77,m1:'1',m2:'0..1',label:'holds'}]},
+   teach:{point:"One-to-(zero-or-one).", sub:"A person holds at most one passport; that passport belongs to one person.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Person'},
+            {x:205,y:50,w:85,h:55,name:'Passport'}],
+           lines:[{x1:100,y1:77,x2:205,y2:77,m1:'1',m2:'0..1',label:'holds'}]}},
+   q:"Passport end shows <b>0..1</b>. A person can hold…",
+   gates:["ZERO OR ONE  PASSPORT","EXACTLY ONE  ALWAYS","MANY  PASSPORTS"], correct:0,
+   why:"0..1 = optional and at most one. The person may have no passport, or a single one."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:80,h:55,name:'Department'},
+     {x:205,y:50,w:80,h:55,name:'Employee'}],
+    lines:[{x1:105,y1:77,x2:205,y2:77,m1:'1',m2:'1..*',label:'employs'}]},
+   teach:{point:"Read the star.", sub:"The * side can be many; here a department employs one-or-more employees.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:80,h:55,name:'Department'},
+            {x:205,y:50,w:80,h:55,name:'Employee'}],
+           lines:[{x1:105,y1:77,x2:205,y2:77,m1:'1',m2:'1..*',label:'employs'}]}},
+   q:"Employee end is <b>1..*</b>. One department employs…",
+   gates:["ONE OR MORE  EMPLOYEES","AT MOST ONE","ZERO EMPLOYEES"], correct:0,
+   why:"1..* means at least one and possibly many. A department must have one-or-more employees."},
+
+  {lesson:2,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Husband'},
+     {x:205,y:50,w:70,h:55,name:'Wife'}],
+    lines:[{x1:100,y1:77,x2:205,y2:77,m1:'1',m2:'1',label:'married to'}]},
+   teach:{point:"One-to-one.", sub:"A 1 on each end means exactly one partner on both sides.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Husband'},
+            {x:205,y:50,w:70,h:55,name:'Wife'}],
+           lines:[{x1:100,y1:77,x2:205,y2:77,m1:'1',m2:'1',label:'married to'}]}},
+   q:"Both ends show <b>1</b>. This is a…",
+   gates:["ONE-TO-ONE","ONE-TO-MANY","MANY-TO-MANY"], correct:0,
+   why:"A 1 on each end is a one-to-one relationship: exactly one object links to exactly one other."},
+
+  /* ===== NEW LESSON 3 — more aggregation/composition variety ===== */
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:70,h:55,name:'Car'},
+     {x:205,y:50,w:75,h:55,name:'Engine'}],
+    lines:[{x1:100,y1:77,x2:205,y2:77,d1:'diamondFilled'}]},
+   teach:{point:"Filled = part dies with whole.", sub:"Scrap the car and that specific engine assembly goes with it.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:70,h:55,name:'Car'},
+            {x:205,y:50,w:75,h:55,name:'Engine'}],
+           lines:[{x1:100,y1:77,x2:205,y2:77,d1:'diamondFilled'}]}},
+   q:"Filled diamond Car ◆— Engine. This models…",
+   gates:["COMPOSITION","AGGREGATION","INHERITANCE"], correct:0,
+   why:"A filled diamond is composition: the part is owned by and dies with the whole."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:85,h:55,name:'University'},
+     {x:215,y:50,w:75,h:55,name:'Student'}],
+    lines:[{x1:115,y1:77,x2:215,y2:77,d1:'diamondHollow'}]},
+   teach:{point:"Hollow = part lives alone.", sub:"A student exists before, during and after enrolling at a university.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:85,h:55,name:'University'},
+            {x:215,y:50,w:75,h:55,name:'Student'}],
+           lines:[{x1:115,y1:77,x2:215,y2:77,d1:'diamondHollow'}]}},
+   q:"Hollow diamond University ◇— Student. This models…",
+   gates:["AGGREGATION","COMPOSITION","ASSOCIATION CLASS"], correct:0,
+   why:"A hollow diamond is aggregation: the student exists independently of the university."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:70,h:55,name:'Book'},
+     {x:205,y:50,w:75,h:55,name:'Chapter'}],
+    lines:[{x1:100,y1:77,x2:205,y2:77,d1:'diamondFilled'}]},
+   teach:{point:"Which class is the whole?", sub:"The diamond touches Book → Book is the whole, Chapter the part.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:70,h:55,name:'Book'},
+            {x:205,y:50,w:75,h:55,name:'Chapter'}],
+           lines:[{x1:100,y1:77,x2:205,y2:77,d1:'diamondFilled'}]}},
+   q:"The filled diamond touches Book. If a Book is deleted, its Chapters…",
+   gates:["ARE DELETED  TOO","STAY  AROUND","BECOME BOOKS"], correct:0,
+   why:"Filled diamond = composition. Chapters belong to the book and are deleted with it."},
+
+  {lesson:3,
+   diagram:{boxes:[
+     {x:30,y:50,w:80,h:55,name:'Library'},
+     {x:210,y:50,w:70,h:55,name:'Book'}],
+    lines:[{x1:110,y1:77,x2:210,y2:77,d1:'diamondHollow'}]},
+   teach:{point:"Diamond on the whole.", sub:"The hollow diamond sits on Library → Library is the whole.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:80,h:55,name:'Library'},
+            {x:210,y:50,w:70,h:55,name:'Book'}],
+           lines:[{x1:110,y1:77,x2:210,y2:77,d1:'diamondHollow'}]}},
+   q:"Which class is the <b>WHOLE</b> in Library ◇— Book?",
+   gates:["Library","Book","Neither"], correct:0,
+   why:"The diamond (hollow or filled) is always drawn on the WHOLE's end — here, Library."},
+
+  /* ===== NEW LESSON 4 — mixed mastery variety ===== */
+  {lesson:4,
+   diagram:{boxes:[
+     {x:110,y:18,w:80,h:34,name:'Shape',italic:true},
+     {x:20,y:96,w:70,h:40,name:'Circle'},
+     {x:115,y:96,w:70,h:40,name:'Square'},
+     {x:210,y:96,w:75,h:40,name:'Triangle'}],
+    lines:[
+     {x1:150,y1:52,x2:150,y2:62},
+     {x1:55,y1:96,x2:138,y2:58,d2:'triangle'},
+     {x1:150,y1:96,x2:150,y2:58,d2:'triangle'},
+     {x1:247,y1:96,x2:162,y2:58,d2:'triangle'}]},
+   teach:{point:"Abstract superclass, 3 subclasses.", sub:"Shape is italic (abstract). Circle/Square/Triangle inherit from it.",
+          tdiagram:{boxes:[
+            {x:110,y:18,w:80,h:34,name:'Shape',italic:true},
+            {x:20,y:96,w:70,h:40,name:'Circle'},
+            {x:115,y:96,w:70,h:40,name:'Square'},
+            {x:210,y:96,w:75,h:40,name:'Triangle'}],
+           lines:[
+            {x1:150,y1:52,x2:150,y2:62},
+            {x1:55,y1:96,x2:138,y2:58,d2:'triangle'},
+            {x1:150,y1:96,x2:150,y2:58,d2:'triangle'},
+            {x1:247,y1:96,x2:162,y2:58,d2:'triangle'}]}},
+   q:"<b>Shape</b> is italic with 3 children. How many <b>subclasses</b> inherit from it?",
+   gates:["THREE","ONE","ZERO"], correct:0,
+   why:"Three triangles point up to Shape: Circle, Square and Triangle are its three subclasses."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:110,y:18,w:85,h:34,name:'Vehicle'},
+     {x:60,y:96,w:75,h:40,name:'Car'},
+     {x:165,y:96,w:75,h:40,name:'Truck'}],
+    lines:[
+     {x1:152,y1:52,x2:152,y2:62},
+     {x1:97,y1:96,x2:140,y2:58,d2:'triangle'},
+     {x1:202,y1:96,x2:165,y2:58,d2:'triangle'}]},
+   teach:{point:"Where does the triangle point?", sub:"The hollow triangle points UP to the general class — Vehicle.",
+          tdiagram:{boxes:[
+            {x:110,y:18,w:85,h:34,name:'Vehicle'},
+            {x:60,y:96,w:75,h:40,name:'Car'},
+            {x:165,y:96,w:75,h:40,name:'Truck'}],
+           lines:[
+            {x1:152,y1:52,x2:152,y2:62},
+            {x1:97,y1:96,x2:140,y2:58,d2:'triangle'},
+            {x1:202,y1:96,x2:165,y2:58,d2:'triangle'}]}},
+   q:"The triangle arrows point to <b>Vehicle</b>. What is the inheritance relationship called?",
+   gates:["GENERALIZATION","COMPOSITION","MULTIPLICITY"], correct:0,
+   why:"Inheritance (the hollow triangle) is also called generalization/specialization. The arrow points to the general superclass."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:25,y:50,w:75,h:55,name:'Doctor'},
+     {x:205,y:50,w:75,h:55,name:'Patient'},
+     {x:115,y:5,w:85,h:34,name:'Appointment',attrs:['date']}],
+    lines:[
+     {x1:100,y1:77,x2:205,y2:77,m1:'1..*',m2:'1..*'},
+     {x1:152,y1:39,x2:152,y2:75}]},
+   teach:{point:"Data on a many-to-many.", sub:"Appointment(date) hangs off the Doctor↔Patient link.",
+          tdiagram:{boxes:[
+            {x:25,y:50,w:75,h:55,name:'Doctor'},
+            {x:205,y:50,w:75,h:55,name:'Patient'},
+            {x:115,y:5,w:85,h:34,name:'Appointment',attrs:['date']}],
+           lines:[
+            {x1:100,y1:77,x2:205,y2:77,m1:'1..*',m2:'1..*'},
+            {x1:152,y1:39,x2:152,y2:75}]}},
+   q:"<b>Appointment(date)</b> on the many-to-many link is a/an…",
+   gates:["ASSOCIATION CLASS","SUBCLASS","COMPOSITION"], correct:0,
+   why:"A many-to-many that stores its own data (date) is modeled as an association class on the link."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:25,y:48,w:80,h:60,name:'Customer',attrs:['custID  {key}']},
+     {x:210,y:48,w:70,h:60,name:'Order',attrs:['orderID']}],
+    lines:[{x1:105,y1:78,x2:210,y2:78,m1:'1',m2:'0..*',label:'places'}]},
+   teach:{point:"Full fragment: read it all.", sub:"Boxes + attributes + a 1 to 0..* association named 'places'.",
+          tdiagram:{boxes:[
+            {x:25,y:48,w:80,h:60,name:'Customer',attrs:['custID  {key}']},
+            {x:210,y:48,w:70,h:60,name:'Order',attrs:['orderID']}],
+           lines:[{x1:105,y1:78,x2:210,y2:78,m1:'1',m2:'0..*',label:'places'}]}},
+   q:"In this fragment, what does <b>{key}</b> next to custID mean?",
+   gates:["IT IS THE  IDENTIFIER","IT IS  OPTIONAL","IT IS A  FOREIGN KEY"], correct:0,
+   why:"{key} marks the identifier — the attribute that uniquely identifies one object of the class."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:30,y:50,w:80,h:55,name:'Folder'},
+     {x:210,y:50,w:70,h:55,name:'File'}],
+    lines:[{x1:110,y1:77,x2:210,y2:77,d1:'diamondFilled',m2:'0..*'}]},
+   teach:{point:"Composition with multiplicity.", sub:"Filled diamond on Folder, 0..* files. Delete the folder → files go.",
+          tdiagram:{boxes:[
+            {x:30,y:50,w:80,h:55,name:'Folder'},
+            {x:210,y:50,w:70,h:55,name:'File'}],
+           lines:[{x1:110,y1:77,x2:210,y2:77,d1:'diamondFilled',m2:'0..*'}]}},
+   q:"Folder ◆— 0..* File. Which TWO facts are true?",
+   gates:["COMPOSITION & MANY FILES","AGGREGATION & ONE FILE","INHERITANCE & NO FILES"], correct:0,
+   why:"The filled diamond = composition (files die with the folder), and 0..* = a folder can hold many files."},
+
+  {lesson:4,
+   diagram:{boxes:[
+     {x:110,y:18,w:90,h:34,name:'Account',italic:true},
+     {x:25,y:96,w:90,h:40,name:'SavingsAccount'},
+     {x:190,y:96,w:95,h:40,name:'CheckingAccount'}],
+    lines:[
+     {x1:155,y1:52,x2:155,y2:62},
+     {x1:70,y1:96,x2:140,y2:58,d2:'triangle'},
+     {x1:237,y1:96,x2:170,y2:58,d2:'triangle'}]},
+   teach:{point:"Italic + triangle together.", sub:"Account is italic (abstract) AND a superclass with two subclasses.",
+          tdiagram:{boxes:[
+            {x:110,y:18,w:90,h:34,name:'Account',italic:true},
+            {x:25,y:96,w:90,h:40,name:'SavingsAccount'},
+            {x:190,y:96,w:95,h:40,name:'CheckingAccount'}],
+           lines:[
+            {x1:155,y1:52,x2:155,y2:62},
+            {x1:70,y1:96,x2:140,y2:58,d2:'triangle'},
+            {x1:237,y1:96,x2:170,y2:58,d2:'triangle'}]}},
+   q:"<b>Account</b> is in italics. You therefore <b>cannot</b>…",
+   gates:["INSTANTIATE  ACCOUNT","MAKE A  SAVINGSACCOUNT","USE INHERITANCE"], correct:0,
+   why:"Italic = abstract. You never instantiate Account directly — only its concrete subclasses like SavingsAccount."},
+];
+
+/* ---------------- Persistence ---------------- */
+const SAVE_KEY='sadHighwayUML_v6';
+function loadSave(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.parse(r):{bank:0,inv:{},skin:'amber',best:1};}catch(e){return{bank:0,inv:{},skin:'amber',best:1};}}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({bank:st.bank,inv:st.inv,skin:st.skin,best:st.best}));}catch(e){}}
+const sv=loadSave();
+
+const SHOP=[
+  {id:'shield',k:'c',cost:50,ic:'🛡️',nm:'Second Chance',ds:'Survive ONE wrong gate this run.'},
+  {id:'x2',k:'c',cost:40,ic:'💰',nm:'Double Gold',ds:'Coins are worth 2× this run.'},
+  {id:'slow',k:'c',cost:30,ic:'🐢',nm:'Slow Study',ds:'Diagrams approach 30% slower this run — more reading time.'},
+  {id:'skC',k:'s',cost:120,ic:'🚗',nm:'Cyan Coupe',ds:'Permanent car skin.'},
+  {id:'skM',k:'s',cost:120,ic:'🚗',nm:'Magenta Racer',ds:'Permanent car skin.'},
+  {id:'skG',k:'s',cost:120,ic:'🚗',nm:'Lime Hatchback',ds:'Permanent car skin.'},
+];
+const SKIN={amber:'#ffb627',skC:'#4ecdc4',skM:'#ff5d8f',skG:'#95e06c'};
+
+/* ---------------- State ---------------- */
+const cv=document.getElementById('game'), cx=cv.getContext('2d');
+let W=0,H=0,laneW=0;const LANES=3;
+const st={
+  run:false, car:{lt:1,la:1,x:0,y:0}, scroll:0, base:3, sp:3,
+  cones:[], coins:[], pops:[], gates:null, diagram:null,
+  banner:null, teach:null, q:null,
+  li:0, lprog:0, nextEvt:0, nextCone:0, nextCoin:0,
+  score:0, gold:0, streak:0, best:0, qDone:0,
+  lives:3, retryGate:null,
+  asked:0, right:0, misses:[], recent:[], crash:0,
+  bank:sv.bank, inv:sv.inv, skin:sv.skin, bestL:sv.best||1,
+  pw:{shield:false,x2:false,slow:false},
+};
+
+/* teaching-card mini canvas */
+const tcv=document.getElementById('teachCanvas'), tcx=tcv.getContext('2d');
+
+function fit(){
+  const w=document.getElementById('wrap');
+  W=w.clientWidth;H=w.clientHeight;cv.width=W;cv.height=H;laneW=W/LANES;
+  st.car.x=laneW*(st.car.la+0.5);st.car.y=H-100;
+  // teach canvas backing store
+  tcv.width=tcv.clientWidth;tcv.height=tcv.clientHeight;
+}
+window.addEventListener('resize',fit);
+
+function steer(d){if(!st.run)return;st.car.lt=Math.max(0,Math.min(LANES-1,st.car.lt+d));}
+window.addEventListener('keydown',e=>{
+  if(e.repeat)return;
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A')steer(-1);
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D')steer(1);
+});
+['touchstart','mousedown'].forEach(ev=>{
+  document.getElementById('tl').addEventListener(ev,e=>{e.preventDefault();steer(-1);});
+  document.getElementById('tr').addEventListener(ev,e=>{e.preventDefault();steer(1);});
+});
+
+/* ---------------- Flow ---------------- */
+function startGame(){
+  Object.assign(st,{run:true,scroll:0,base:3,sp:3,cones:[],coins:[],pops:[],
+    gates:null,diagram:null,banner:null,teach:null,q:null,
+    li:0,lprog:0,nextEvt:0,nextCone:250,nextCoin:150,
+    score:0,gold:0,streak:0,best:0,qDone:0,lives:3,retryGate:null,asked:0,right:0,misses:[],recent:[],crash:0});
+  st.car.lt=1;st.car.la=1;
+  ['shield','x2','slow'].forEach(id=>{
+    if(st.pw[id]&&(st.inv[id]||0)>0)st.inv[id]--;else st.pw[id]=false;
+  });
+  save();
+  hideAll();
+  ['startScr','endScr','revScr','shopScr'].forEach(i=>document.getElementById(i).classList.remove('show'));
+  hud();fit();
+  banner(0);
+  if(!running){running=true;requestAnimationFrame(loop);}
+}
+function hideAll(){
+  ['banner','teach','qStrip','fb'].forEach(i=>document.getElementById(i).classList.remove('show'));
+}
+
+const BAN_MS=4500;
+function banner(li){
+  st.li=li;st.lprog=0;
+  const L=LESSONS[li];
+  st.banner={t0:performance.now()};
+  document.getElementById('bnNum').textContent=`LESSON ${L.id} OF ${LESSONS.length}`;
+  document.getElementById('bnTitle').textContent=L.title;
+  document.getElementById('bnGoal').textContent=L.goal;
+  document.getElementById('bnSecs').textContent=Math.ceil(BAN_MS/1000);
+  document.getElementById('banner').classList.add('show');
+  document.getElementById('lessonChip').textContent='Lesson '+L.id+' · '+L.title;
+  st.cones=[];
+}
+function endBanner(){st.banner=null;document.getElementById('banner').classList.remove('show');startTeach();}
+
+const TEACH_MS=13000;
+function startTeach(){
+  const L=LESSONS[st.li];
+  let pool;
+  if(L.id===4)pool=BANK.filter(q=>!st.recent.includes(q));
+  else pool=BANK.filter(q=>q.lesson===L.id&&!st.recent.includes(q));
+  if(!pool.length)pool=(L.id===4)?BANK.slice():BANK.filter(q=>q.lesson===L.id);
+  const q=pool[Math.floor(Math.random()*pool.length)];
+  st.recent.push(q);if(st.recent.length>6)st.recent.shift();
+  st.q=q;
+  st.teach={t0:performance.now()};
+  // draw the teaching diagram (labelled version)
+  document.getElementById('teachBadge').textContent='LESSON '+L.id+' · LOOK AT THE DIAGRAM';
+  document.getElementById('teachPoint').textContent=q.teach.point;
+  document.getElementById('teachSub').textContent=q.teach.sub;
+  document.getElementById('teachSecs').textContent=Math.ceil(TEACH_MS/1000);
+  document.getElementById('teach').classList.add('show');
+  // render after layout settles
+  requestAnimationFrame(()=>{
+    tcv.width=tcv.clientWidth;tcv.height=tcv.clientHeight;
+    drawUML(tcx,q.teach.tdiagram||q.diagram,tcv.width,tcv.height);
+  });
+  st.cones=[];
+}
+function endTeach(){
+  st.teach=null;
+  document.getElementById('teach').classList.remove('show');
+  startQuestion(st.q);
+}
+
+function startQuestion(q){
+  st.diagram=q.diagram;
+  // 3 gates: shuffle the option order, remember which lane is correct
+  const order=[0,1,2];
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  const correctLane=order.indexOf(q.correct);
+  st.gates={
+    q, order, correctLane,
+    labels:order.map(o=>q.gates[o]),
+    y:-550,                 // gate bar starts far up; descends toward the car
+    answerY:H-130,
+    resolved:false,
+  };
+  document.getElementById('qStrip').innerHTML=q.q;
+  document.getElementById('qStrip').classList.add('show');
+  st.nextCone=st.scroll+140;     // a few cones before the gate closes in
+}
+
+function resolveGate(lane){
+  const G=st.gates;if(!G||G.resolved)return;
+  G.resolved=true;
+  st.cones=[];
+  const ok=lane===G.correctLane;
+  const q=G.q;
+
+  if(ok){
+    st.gates=null;
+    document.getElementById('qStrip').classList.remove('show');
+    st.asked++;
+    st.right++;st.score+=120+st.streak*15;st.streak++;st.best=Math.max(st.best,st.streak);
+    st.qDone++;st.lprog++;
+    // Gold reward for a correct read (encourages mastery, feeds the market)
+    const reward=st.pw.x2?6:3;
+    st.gold+=reward;
+    feedback(true,'✓ CORRECT  +'+reward+' 💰',q.why);
+    const L=LESSONS[st.li];
+    const done=st.lprog>=L.clearAfter && st.li<LESSONS.length-1;
+    setTimeout(()=>{
+      hideFb();
+      if(done){
+        const ni=st.li+1;st.bestL=Math.max(st.bestL,LESSONS[ni].id);save();
+        setTimeout(()=>banner(ni),40);
+      }else{
+        st.nextEvt=st.scroll+800+Math.random()*240;
+        st.nextCone=st.scroll+280;st.nextCoin=st.scroll+150;
+      }
+    },2600);
+    hud();
+  }else{
+    // WRONG — teach instead of ending the run.
+    st.streak=0;
+    if(!G.wrongOnce){          // first wrong on this question: count it as a miss
+      st.asked++;
+      st.misses.push(q);
+      G.wrongOnce=true;
+    }
+    // Shield power-up: auto-pass this question with the explanation shown
+    if(st.pw.shield){
+      st.pw.shield=false;
+      st.gates=null;
+      document.getElementById('qStrip').classList.remove('show');
+      feedback(false,'🛡️ SHIELD USED — here\u2019s why',q.why,G);
+      setTimeout(()=>{
+        hideFb();
+        st.nextEvt=st.scroll+800+Math.random()*240;
+        st.nextCone=st.scroll+280;st.nextCoin=st.scroll+150;
+      },3200);
+      hud();
+      return;
+    }
+    st.lives--;
+    hud();
+    if(st.lives>0){
+      // Show WHY, then let the SAME diagram come back so the student can apply it.
+      feedback(false,'✗ NOT QUITE — learn & retry ('+st.lives+' ❤️ left)',q.why,G);
+      setTimeout(()=>{
+        hideFb();
+        // Re-arm the very same question as a retry (gate descends again).
+        retryQuestion(q);
+      },3400);
+    }else{
+      // Out of lives: still show the explanation, then end.
+      feedback(false,'✗ OUT OF LIVES',q.why,G);
+      st.gates=null;
+      document.getElementById('qStrip').classList.remove('show');
+      setTimeout(()=>{hideFb();endRun('Ran out of lives');},3600);
+    }
+  }
+}
+
+// Bring the SAME question back so the learner can apply what they just read.
+function retryQuestion(q){
+  const order=[0,1,2];
+  for(let i=order.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+  const correctLane=order.indexOf(q.correct);
+  st.diagram=q.diagram;
+  st.gates={
+    q, order, correctLane,
+    labels:order.map(o=>q.gates[o]),
+    y:-550, answerY:H-130, resolved:false,
+    wrongOnce:true,            // already counted as a miss; don't double-count
+    isRetry:true,
+  };
+  document.getElementById('qStrip').innerHTML='🔁 TRY AGAIN: '+q.q;
+  document.getElementById('qStrip').classList.add('show');
+  st.nextCone=st.scroll+99999;  // no cones during a retry — focus on learning
+}
+
+function feedback(ok,head,why,G){
+  const f=document.getElementById('fb');
+  f.className='show '+(ok?'ok':'no');
+  document.getElementById('fbHead').textContent=head;
+  let whyText=why;
+  // On a wrong answer, explicitly tell the learner which gate was correct.
+  if(!ok && G && G.q){
+    const correctLabel=G.q.gates[G.q.correct];
+    whyText='✓ Correct gate: '+correctLabel+'\n\n'+why;
+  }
+  document.getElementById('fbWhy').textContent=whyText;
+}
+function hideFb(){document.getElementById('fb').classList.remove('show');}
+
+function endRun(reason){
+  st.run=false;st.bank+=st.gold;save();
+  document.getElementById('fScore').textContent=st.score;
+  document.getElementById('fLesson').textContent=LESSONS[st.li].id+' · '+LESSONS[st.li].title;
+  document.getElementById('fQ').textContent=st.qDone;
+  document.getElementById('fAcc').textContent=(st.asked?Math.round(100*st.right/st.asked):0)+'%';
+  document.getElementById('fGold').textContent=st.gold;
+  document.getElementById('fBank').textContent=st.bank;
+  document.getElementById('eReason').textContent=reason||'Run complete';
+  document.getElementById('eTitle').textContent=st.li===LESSONS.length-1?'MASTERY RUN':'RUN OVER';
+  document.getElementById('revBtn').style.display=st.misses.length?'':'none';
+  document.getElementById('endScr').classList.add('show');
+}
+function backToEnd(){document.getElementById('revScr').classList.remove('show');document.getElementById('endScr').classList.add('show');}
+function showReview(){
+  const l=document.getElementById('revList');l.innerHTML='';
+  if(!st.misses.length)l.innerHTML='<p style="opacity:.6">No misses — clean run!</p>';
+  else st.misses.forEach((q,idx)=>{
+    const d=document.createElement('div');d.className='rc';
+    d.innerHTML=`<canvas id="rv${idx}"></canvas>
+      <div style="font-size:12px">${q.q}</div>
+      <div class="rt">✓ ${q.gates[q.correct]}</div>
+      <div style="font-size:11px;line-height:1.45">${q.why}</div>`;
+    l.appendChild(d);
+    const c=d.querySelector('canvas');
+    requestAnimationFrame(()=>{c.width=c.clientWidth;c.height=c.clientHeight;drawUML(c.getContext('2d'),q.teach.tdiagram||q.diagram,c.width,c.height);});
+  });
+  document.getElementById('endScr').classList.remove('show');
+  document.getElementById('revScr').classList.add('show');
+}
+
+/* ---------------- Spawns ---------------- */
+function spawnCone(){st.cones.push({lane:Math.floor(Math.random()*LANES),y:-50,hit:false});}
+function spawnCoins(){const ln=Math.floor(Math.random()*LANES);const n=1+Math.floor(Math.random()*4);for(let i=0;i<n;i++)st.coins.push({lane:ln,y:-50-i*40,got:false,sp:Math.random()*6.28});}
+
+/* ---------------- Loop ---------------- */
+let running=false,lastT=0;
+function loop(t){
+  if(!running)return;
+  lastT=t;
+  if(st.run)update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(){
+  const tx=laneW*(st.car.lt+0.5);
+  st.car.x+=(tx-st.car.x)*0.25;
+  st.car.la=st.car.x/laneW-0.5;
+
+  if(st.banner){
+    st.sp=st.base*0.12;st.scroll+=st.sp;
+    const r=Math.max(0,BAN_MS-(performance.now()-st.banner.t0));
+    document.getElementById('bnSecs').textContent=Math.ceil(r/1000);
+    if(r<=0)endBanner();
+    return;
+  }
+  if(st.teach){
+    st.sp=st.base*0.14;st.scroll+=st.sp;
+    const r=Math.max(0,TEACH_MS-(performance.now()-st.teach.t0));
+    document.getElementById('teachSecs').textContent=Math.ceil(r/1000);
+    if(r<=0)endTeach();
+    return;
+  }
+
+  if(st.gates){
+    const G=st.gates;
+    const dist=G.answerY-G.y;             // distance until the gate reaches the car
+    const slowZone=300;
+    let target;
+    if(dist>slowZone)target=st.base;      // far: full speed, dodge cones
+    else target=st.base*(0.16+0.6*Math.max(0,dist/slowZone)); // slows as it nears
+    if(st.pw.slow)target*=0.7;
+    st.sp+=(target-st.sp)*0.12;
+    st.scroll+=st.sp;
+    const step=0.6+st.sp*0.2;
+    G.y+=step;
+
+    const dodging=dist>slowZone;
+    if(dodging&&st.scroll>=st.nextCone){spawnCone();st.nextCone=st.scroll+170+Math.random()*110;}
+    st.cones.forEach(o=>o.y+=st.sp);
+    st.cones=st.cones.filter(o=>o.y<H+100);
+    if(dodging)st.cones.forEach(o=>{
+      if(!o.hit&&Math.abs(o.lane-st.car.la)<0.5&&Math.abs(o.y-st.car.y)<40){o.hit=true;st.crash=20;st.streak=0;hud();}
+    });
+    if(st.crash>0)st.crash--;
+
+    if(G.y>=G.answerY){
+      resolveGate(Math.max(0,Math.min(LANES-1,Math.round(st.car.la))));
+    }
+    return;
+  }
+
+  // free driving
+  st.sp+=(st.base-st.sp)*0.1;st.scroll+=st.sp;
+  if(st.scroll>=st.nextEvt){startTeach();return;}
+  if(st.scroll>=st.nextCone){spawnCone();st.nextCone=st.scroll+170+Math.random()*110-Math.min(50,st.streak*3);}
+  st.cones.forEach(o=>o.y+=st.sp);st.cones=st.cones.filter(o=>o.y<H+100);
+  if(st.scroll>=st.nextCoin){spawnCoins();st.nextCoin=st.scroll+220+Math.random()*180;}
+  st.coins.forEach(c=>{c.y+=st.sp;c.sp+=0.15;});
+  st.coins=st.coins.filter(c=>c.y<H+60&&!c.got);
+  st.coins.forEach(c=>{
+    if(!c.got&&Math.abs(c.lane-st.car.la)<0.5&&Math.abs(c.y-st.car.y)<36){
+      c.got=true;const v=st.pw.x2?2:1;st.gold+=v;
+      st.pops.push({x:st.car.x,y:st.car.y-20,a:0,v});hud();
+    }
+  });
+  st.pops.forEach(p=>{p.y-=1.5;p.a++;});st.pops=st.pops.filter(p=>p.a<50);
+  st.cones.forEach(o=>{
+    if(!o.hit&&Math.abs(o.lane-st.car.la)<0.5&&Math.abs(o.y-st.car.y)<40){o.hit=true;st.crash=20;st.streak=0;hud();}
+  });
+  if(st.crash>0)st.crash--;
+}
+
+/* ---------------- Render ---------------- */
+function render(){
+  cx.fillStyle='#1a1d24';cx.fillRect(0,0,W,H);
+  cx.strokeStyle='rgba(245,215,110,.4)';cx.lineWidth=3;cx.setLineDash([24,24]);
+  cx.lineDashOffset=-st.scroll%48;
+  for(let i=1;i<LANES;i++){cx.beginPath();cx.moveTo(laneW*i,0);cx.lineTo(laneW*i,H);cx.stroke();}
+  cx.setLineDash([]);
+  cx.strokeStyle='#ffb627';cx.lineWidth=4;
+  cx.beginPath();cx.moveTo(2,0);cx.lineTo(2,H);cx.stroke();
+  cx.beginPath();cx.moveTo(W-2,0);cx.lineTo(W-2,H);cx.stroke();
+
+  st.cones.forEach(o=>cone(laneW*(o.lane+0.5),o.y,o.hit));
+  st.coins.forEach(c=>{if(!c.got)coin(laneW*(c.lane+0.5),c.y,c.sp);});
+
+  // Diagram billboard + 3 gates while a question is active
+  if(st.gates)drawGates();
+
+  car(st.car.x,st.car.y);
+  st.pops.forEach(p=>{cx.fillStyle=`rgba(245,215,110,${1-p.a/50})`;cx.font='bold 18px Courier New';cx.textAlign='center';cx.fillText('+'+(p.v||1),p.x,p.y);});
+  if(st.crash>0){cx.fillStyle=`rgba(255,71,87,${st.crash/40})`;cx.fillRect(0,0,W,H);}
+}
+
+function drawGates(){
+  const G=st.gates;
+  // 1) Persistent diagram billboard fixed at the top of the play area
+  const bx=10, bw=W-20, by=70, bh=Math.min(150,H*0.22);
+  cx.fillStyle='#fffdf5';cx.fillRect(bx,by,bw,bh);
+  cx.strokeStyle='#ffb627';cx.lineWidth=3;cx.strokeRect(bx,by,bw,bh);
+  drawUMLClipped(cx, st.diagram, bx+6, by+6, bw-12, bh-12);
+
+  // 2) The 3 descending gate panels (one per lane). Taller so long answers fit.
+  const gy=G.y, gh=86;
+  for(let ln=0;ln<LANES;ln++){
+    const gx=laneW*ln+6, gw=laneW-12;
+    cx.fillStyle='#f4ead5';
+    cx.fillRect(gx,gy-gh/2,gw,gh);
+    cx.strokeStyle='#1a1d24';cx.lineWidth=3;
+    cx.strokeRect(gx,gy-gh/2,gw,gh);
+    cx.fillStyle='#1a1d24';
+    cx.textAlign='center';cx.textBaseline='middle';
+
+    // Measurement-based word wrap. Try a few font sizes until the label fits
+    // in at most 3 lines within the gate width (with padding).
+    const label = G.labels[ln];
+    const maxW = gw - 8;
+    const tryFont = (fs) => {
+      cx.font = 'bold ' + fs + 'px Courier New';
+      const words = label.split(/\s+/);
+      const lines = [];
+      let cur = '';
+      for (const w of words) {
+        const test = cur ? cur + ' ' + w : w;
+        if (cx.measureText(test).width <= maxW) cur = test;
+        else { if (cur) lines.push(cur); cur = w; }
+      }
+      if (cur) lines.push(cur);
+      // any single word still too wide for this font?
+      const ok = lines.length <= 3 && lines.every(l => cx.measureText(l).width <= maxW);
+      return ok ? lines : null;
+    };
+    let fs = 14, lines = tryFont(fs);
+    if (!lines) { fs = 12; lines = tryFont(fs); }
+    if (!lines) { fs = 10; lines = tryFont(fs); }
+    if (!lines) { fs = 9;  lines = tryFont(fs) || [label]; }   // last resort
+
+    cx.font = 'bold ' + fs + 'px Courier New';
+    const lh = fs + 3;
+    const totalH = lh * lines.length;
+    const startY = gy - totalH/2 + lh/2;
+    lines.forEach((t, i) => {
+      cx.fillText(t, gx + gw/2, startY + i * lh);
+    });
+  }
+}
+
+// draw a UML spec clipped/centered into a screen rect
+function drawUMLClipped(g, spec, rx, ry, rw, rh){
+  g.save();
+  g.beginPath();g.rect(rx,ry,rw,rh);g.clip();
+  g.translate(rx,ry);
+  drawUML(g, spec, rw, rh);
+  g.restore();
+}
+
+function cone(x,y,hit){
+  cx.save();cx.translate(x,y);
+  cx.fillStyle='rgba(0,0,0,.4)';cx.beginPath();cx.ellipse(2,18,24,6,0,0,6.28);cx.fill();
+  cx.fillStyle=hit?'#7a3a1a':'#ff6b35';
+  cx.beginPath();cx.moveTo(0,-28);cx.lineTo(20,18);cx.lineTo(-20,18);cx.closePath();cx.fill();
+  cx.fillStyle='#f4ead5';cx.fillRect(-15,-2,30,6);cx.fillRect(-18,10,36,5);
+  cx.fillStyle='#1a1d24';cx.fillRect(-22,18,44,6);
+  cx.restore();
+}
+function coin(x,y,s){
+  cx.save();cx.translate(x,y);const p=Math.sin(s||0)*2;
+  cx.fillStyle='rgba(0,0,0,.35)';cx.beginPath();cx.ellipse(2,14,12,3,0,0,6.28);cx.fill();
+  cx.fillStyle='#f5d76e';cx.beginPath();cx.arc(0,0,14+p*.3,0,6.28);cx.fill();
+  cx.strokeStyle='#c89a2e';cx.lineWidth=2;cx.beginPath();cx.arc(0,0,10,0,6.28);cx.stroke();
+  cx.fillStyle='#c89a2e';cx.font='bold 14px Courier New';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('$',0,1);
+  cx.restore();
+}
+function car(x,y){
+  cx.save();cx.translate(x,y);
+  cx.fillStyle='rgba(0,0,0,.5)';cx.fillRect(-26,36,52,8);
+  cx.fillStyle=SKIN[st.skin]||SKIN.amber;cx.fillRect(-26,-40,52,80);
+  cx.strokeStyle='#1a1d24';cx.lineWidth=3;cx.strokeRect(-26,-40,52,80);
+  cx.fillStyle='#4ecdc4';cx.fillRect(-20,-28,40,22);cx.strokeRect(-20,-28,40,22);
+  cx.fillRect(-20,8,40,16);cx.strokeRect(-20,8,40,16);
+  cx.fillStyle='#1a1d24';cx.fillRect(-30,-32,6,18);cx.fillRect(24,-32,6,18);cx.fillRect(-30,14,6,18);cx.fillRect(24,14,6,18);
+  cx.fillStyle='#fff';cx.fillRect(-22,-42,10,4);cx.fillRect(12,-42,10,4);
+  cx.restore();
+}
+
+/* ---------------- HUD / Shop ---------------- */
+function hud(){
+  document.getElementById('vScore').textContent=st.score;
+  document.getElementById('vLives').textContent='❤️'.repeat(Math.max(0,st.lives))||'💀';
+  document.getElementById('vGold').textContent=st.gold;
+  document.getElementById('vAcc').textContent=st.asked?Math.round(100*st.right/st.asked)+'%':'—';
+  const sb=document.getElementById('sBank');if(sb)sb.textContent=st.bank;
+}
+function pills(){
+  const w=document.getElementById('pPills');w.innerHTML='';let any=false;
+  SHOP.filter(i=>i.k==='c').forEach(it=>{
+    const o=st.inv[it.id]||0;if(o<=0)return;any=true;
+    const on=!!st.pw[it.id];const b=document.createElement('button');
+    b.className=on?'on':'';b.innerHTML=`${it.ic} ${it.nm} ×${o}`;
+    b.onclick=()=>{st.pw[it.id]=!on;pills();};w.appendChild(b);
+  });
+  if(!any){const h=document.createElement('div');h.style.cssText='font-size:10px;opacity:.5;letter-spacing:1px';h.textContent='Earn gold → buy power-ups in the Market';w.appendChild(h);}
+}
+function showShop(){['startScr','endScr','revScr'].forEach(i=>document.getElementById(i).classList.remove('show'));document.getElementById('shopScr').classList.add('show');shop();}
+function closeShop(){document.getElementById('shopScr').classList.remove('show');document.getElementById('startScr').classList.add('show');hud();pills();}
+function shop(){
+  document.getElementById('shBank').textContent=st.bank;
+  const g=document.getElementById('shGrid');g.innerHTML='';
+  SHOP.forEach(it=>{
+    const d=document.createElement('div');d.className='si';
+    const o=st.inv[it.id]||0,sk=it.k==='s',os=sk&&o,eq=sk&&st.skin===it.id;
+    let btn;
+    if(sk){
+      if(eq)btn='<button class="eq" disabled>EQUIPPED</button>';
+      else if(os)btn=`<button onclick="equip('${it.id}')">EQUIP</button>`;
+      else btn=`<button onclick="buy('${it.id}')" ${st.bank<it.cost?'disabled':''}>BUY</button>`;
+    }else btn=`<button onclick="buy('${it.id}')" ${st.bank<it.cost?'disabled':''}>BUY +1</button>`;
+    const cn=(!sk&&o>0)?`<span class="cn">OWN ×${o}</span>`:'';
+    d.innerHTML=`<div class="ic" ${sk?`style="color:${SKIN[it.id]}"`:''}>${it.ic}</div>
+      <div class="bd"><div class="nm">${it.nm}</div><div class="ds">${it.ds}</div>
+      <div class="ft"><span class="ct">💰 ${it.cost}</span><span style="display:flex;gap:8px;align-items:center">${cn}${btn}</span></div></div>`;
+    g.appendChild(d);
+  });
+}
+function buy(id){const it=SHOP.find(s=>s.id===id);if(!it||st.bank<it.cost)return;if(it.k==='s'&&st.inv[id])return;st.bank-=it.cost;st.inv[id]=(st.inv[id]||0)+1;if(it.k==='s')st.skin=id;save();shop();}
+function equip(id){if(!st.inv[id])return;st.skin=id;save();shop();}
+
+/* ---------------- Boot ---------------- */
+fit();hud();pills();
+running=true;requestAnimationFrame(loop);
+</script>
+</body>
+</html>
