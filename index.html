@@ -197,6 +197,12 @@
     </div>
     <div id="pPills" class="pp"></div>
     <div class="ch"><span class="k">←</span> <span class="k">→</span> or <span class="k">A</span> <span class="k">D</span> to choose your gate</div>
+    <div style="margin:12px 0 4px">
+      <input id="playerCode" placeholder="your player code (e.g. okay-09)" autocomplete="off" spellcheck="false"
+        style="width:80%;max-width:320px;padding:9px 12px;border-radius:8px;border:1px solid #555;background:#0d0d12;color:#fff;font-size:14px;text-align:center;outline:none">
+      <div style="font-size:10px;opacity:.6;margin-top:5px">Enter the SAME player code you use in the GPAF Player tool — needed for your play log.</div>
+      <div id="pcWarn" style="display:none;color:#f55;font-size:11px;margin-top:5px">⚠ Player code is required to start.</div>
+    </div>
     <button class="btn" onclick="startGame()">▶ START LESSON 1</button>
     <button class="btn sec" onclick="showShop()">🏪 MARKET (<span id="sBank">0</span> 💰)</button>
     <p style="font-size:10px;opacity:.5;margin-top:12px">Satzinger, Jackson &amp; Burd · 7th Ed. Chapter 4</p>
@@ -214,6 +220,7 @@
     <button class="btn" onclick="startGame()">▶ TRY AGAIN</button>
     <button class="btn sec" onclick="showShop()">🏪 MARKET</button>
     <button class="btn sec" onclick="showReview()" id="revBtn">📖 REVIEW</button>
+    <button class="btn sec" onclick="downloadGPAFLog()">⬇ DOWNLOAD GPAF LOG</button>
   </div>
 
   <div class="scr" id="revScr">
@@ -972,7 +979,41 @@ window.addEventListener('keydown',e=>{
 });
 
 /* ---------------- Flow ---------------- */
+/* ---------------- GPAF play logging (added for play-phase log submission) ---------------- */
+const GPAF_GAME_ID='GM-E446B5BCE7BE';
+let GLOG=[], GSESSION='';
+function glog(type,payload){
+  GLOG.push({ts:new Date().toISOString(),playerPseudoId:(st.player||'anon'),sessionId:GSESSION,gameId:GPAF_GAME_ID,eventType:type,payload:payload||{}});
+}
+function downloadGPAFLog(){
+  if(!GLOG.length){alert('Play at least one run first — there is no log yet.');return;}
+  var txt=GLOG.map(function(e){return JSON.stringify(e);}).join('\n')+'\n';
+  var blob=new Blob([txt],{type:'application/x-ndjson'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='gpaf_log_'+String(st.player||'anon').replace(/[^A-Za-z0-9_-]/g,'_')+'.jsonl';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},120);
+}
+window.addEventListener('load',function(){try{var pc=localStorage.getItem('gpaf_player');var el=document.getElementById('playerCode');if(pc&&el)el.value=pc;}catch(e){}});
+
 function startGame(){
+  var _inp=document.getElementById('playerCode');
+  var _pc=((_inp||{}).value||'').trim();
+  if(!_pc){
+    if(_inp){
+      _inp.style.borderColor='#e23';
+      _inp.placeholder='Enter your player code first!';
+      _inp.focus();
+    }
+    var _warn=document.getElementById('pcWarn');
+    if(_warn)_warn.style.display='block';
+    return; // do not start without a player code
+  }
+  if(_inp)_inp.style.borderColor='#555';
+  var _warn2=document.getElementById('pcWarn');if(_warn2)_warn2.style.display='none';
+  st.player=_pc;try{localStorage.setItem('gpaf_player',_pc);}catch(e){}
+  GLOG=[];GSESSION='s-'+Date.now()+'-'+Math.floor(Math.random()*9999);
+  glog('session_start',{});
   Object.assign(st,{run:true,scroll:0,base:3,sp:3,cones:[],coins:[],pops:[],
     gates:null,diagram:null,banner:null,teach:null,q:null,
     li:0,lprog:0,nextEvt:0,nextCone:250,nextCoin:150,
@@ -1061,12 +1102,14 @@ function resolveGate(lane){
   st.cones=[];
   const ok=lane===G.correctLane;
   const q=G.q;
+  glog('answer',{correct:ok,lesson:LESSONS[st.li].id});
 
   if(ok){
     st.gates=null;
     document.getElementById('qStrip').classList.remove('show');
     st.asked++;
     st.right++;st.score+=120+st.streak*15;st.streak++;st.best=Math.max(st.best,st.streak);
+    glog('score_update',{score:st.score});
     st.qDone++;st.lprog++;
     // Gold reward for a correct read (encourages mastery, feeds the market)
     const reward=st.pw.x2?6:3;
@@ -1078,6 +1121,7 @@ function resolveGate(lane){
       hideFb();
       if(done){
         const ni=st.li+1;st.bestL=Math.max(st.bestL,LESSONS[ni].id);save();
+        glog('level_complete',{level:LESSONS[st.li].id});
         setTimeout(()=>banner(ni),40);
       }else{
         st.nextEvt=st.scroll+800+Math.random()*240;
@@ -1161,6 +1205,7 @@ function hideFb(){document.getElementById('fb').classList.remove('show');}
 
 function endRun(reason){
   st.run=false;st.bank+=st.gold;save();
+  glog('session_end',{score:st.score,accuracy:(st.asked?Math.round(100*st.right/st.asked):0),diagramsRead:st.qDone,lessonReached:LESSONS[st.li].id,completed:true});
   document.getElementById('fScore').textContent=st.score;
   document.getElementById('fLesson').textContent=LESSONS[st.li].id+' · '+LESSONS[st.li].title;
   document.getElementById('fQ').textContent=st.qDone;
